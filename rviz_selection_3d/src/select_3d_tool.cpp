@@ -24,11 +24,14 @@ void SelectionToolPlugin::onInitialize() {
 }
 
 void SelectionToolPlugin::activate() {
-    
+    clearAllMarkers();
+    currently_selecting = false;
 
 }
 
 void SelectionToolPlugin::deactivate() {
+        currently_selecting = false;
+    
 }
 
 int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& event) {
@@ -37,7 +40,11 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
     render_panel = event.panel;
     Ogre::Camera* camera = render_panel->getViewController()->getCamera();
     Ogre::Viewport* viewport = camera->getViewport();
-    if ((event.leftDown() || event.rightDown()) && !currently_selecting && success){
+
+    bool in_viewport = (event.x >= 0 && event.x <= viewport->getActualWidth() && 
+                        event.y >= 0 && event.y <= viewport->getActualHeight());
+
+    if ((event.leftDown() || event.rightDown()) && !currently_selecting && success && in_viewport){
         // Set selection mode
         if (event.leftDown()) {
             selection_mode = true;
@@ -45,8 +52,11 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
             selection_mode = false;
         }
 
+        RCLCPP_INFO(node->get_logger(), "Mouse down");
+
         // if first point in selection
         if (success) {
+            clearAllMarkers();
             selected_points.clear();
             selected_polygon_lines.clear();
 
@@ -96,7 +106,11 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
         if (std::abs(current_second_point.distance(current_first_point)) >= distance_threshold) {        
             auto line = std::make_shared<rviz_rendering::Line>(context_->getSceneManager());   
             line->setPoints(current_first_point, current_second_point);
-            line->setColor(0.0, 1.0, 0.0, 1.0);
+            if (selection_mode) {
+                line->setColor(0.0, 1.0, 0.0, 1.0);
+            } else {
+                line->setColor(1.0, 0.0, 0.0, 1.0);
+            }
             
             selected_polygon_lines.push_back(line);
             current_first_point = current_second_point;
@@ -114,6 +128,14 @@ void SelectionToolPlugin::addToMarkerArray(Ogre::Vector3 point1, Ogre::Vector3 p
 }
 
 void SelectionToolPlugin::clearAllMarkers() {
+
+    for (auto& line: selected_polygon_lines) {
+        line->setVisible(false);
+    }
+
+    selected_polygon_lines.clear();
+    selected_points.clear();
+    line_grid_points.clear();
 
 }
 
