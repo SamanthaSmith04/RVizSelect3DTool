@@ -25,6 +25,7 @@
 #include <rviz_common/tool_manager.hpp> 
 #include <rviz_common/interaction/view_picker_iface.hpp>
 
+#include <geometry_msgs/msg/point.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
 #include <OgreVector3.h>
@@ -41,10 +42,11 @@ public:
     int processMouseEvent(rviz_common::ViewportMouseEvent& event) override;
     void addToMarkerArray(Ogre::Vector3 point1, Ogre::Vector3 point2);
     void clearAllMarkers();
-    void publishSelectedAreaInfo();
+    void publishSelectedAreaInfo(Ogre::Camera* camera);
 
 private:
     std::shared_ptr<rclcpp::Node> node;
+    rclcpp::Publisher<rviz_selection_3d::msg::SelectionRegion>::SharedPtr selected_area_pub;
     std::vector<Ogre::Vector3> selected_points;
     std::vector<Ogre::Vector2> line_grid_points;
     std::vector<std::shared_ptr<rviz_rendering::Line>> selected_polygon_lines;

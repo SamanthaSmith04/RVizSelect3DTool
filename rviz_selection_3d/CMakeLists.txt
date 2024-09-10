@@ -49,6 +49,9 @@ add_library(${PROJECT_NAME}_lib SHARED
 # Interface generation
 rosidl_generate_interfaces(${PROJECT_NAME}
   "interfaces/msg/SelectionRegion.msg"
+  DEPENDENCIES
+  geometry_msgs
+
 )
 ament_export_dependencies(rosidl_default_runtime)
 

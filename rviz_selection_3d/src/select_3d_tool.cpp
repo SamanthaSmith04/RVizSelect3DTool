@@ -13,6 +13,7 @@
 SelectionToolPlugin::SelectionToolPlugin() : Tool()
 , node(std::make_shared<rclcpp::Node>("select_3d_tool"))
 {
+    selected_area_pub = node->create_publisher<rviz_selection_3d::msg::SelectionRegion>("/region_points", 10);
 }
 
 
@@ -82,7 +83,7 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
     // mouse has been un-clicked, stop tracking movement
     else if (((event.leftUp() && selection_mode) || (event.rightUp() && !selection_mode)) && success) {
         currently_selecting = false;
-        if (std::abs(pos.distance(current_first_point)) >= distance_threshold || line_grid_points.size() > 1) {    
+        if (line_grid_points.size() > 1) {    
             end = Ogre::Vector3();
             end.x = pos.x;
             end.y = pos.y;
@@ -95,7 +96,17 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
             grid_pos.y = event.y;
             line_grid_points.push_back(grid_pos);
 
+            auto line = std::make_shared<rviz_rendering::Line>(context_->getSceneManager());   
+            line->setPoints(end, begin);
+            if (selection_mode) {
+                line->setColor(0.0, 1.0, 0.0, 1.0);
+            } else {
+                line->setColor(1.0, 0.0, 0.0, 1.0);
+            }
+            selected_polygon_lines.push_back(line);
         }
+        Ogre::Camera* camera = render_panel->getViewController()->getCamera();
+        publishSelectedAreaInfo(camera);
     }
     else if (success && currently_selecting) {
         current_second_point = Ogre::Vector3();
@@ -113,6 +124,7 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
             }
             
             selected_polygon_lines.push_back(line);
+            selected_points.push_back(current_first_point);
             current_first_point = current_second_point;
 
             auto grid_pos = Ogre::Vector2();
@@ -124,8 +136,6 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
     }
 }
 
-void SelectionToolPlugin::addToMarkerArray(Ogre::Vector3 point1, Ogre::Vector3 point2) {
-}
 
 void SelectionToolPlugin::clearAllMarkers() {
 
@@ -139,5 +149,28 @@ void SelectionToolPlugin::clearAllMarkers() {
 
 }
 
-void SelectionToolPlugin::publishSelectedAreaInfo() {
+void SelectionToolPlugin::publishSelectedAreaInfo(Ogre::Camera* camera) {
+    rviz_selection_3d::msg::SelectionRegion msg;
+    
+    std::vector<geometry_msgs::msg::Point> selected_points_msg;
+    for (auto& point: selected_points) {
+        geometry_msgs::msg::Point point_msg;
+        point_msg.x = point.x;
+        point_msg.y = point.y;
+        point_msg.z = point.z;
+        selected_points_msg.push_back(point_msg);
+    }
+
+    msg.points = selected_points_msg;
+
+    msg.is_selecting = selection_mode;
+
+    geometry_msgs::msg::Point camera_pos;
+    auto camera_pos_ogre = camera->getPositionForViewUpdate();
+    camera_pos.x = camera_pos_ogre.x;
+    camera_pos.y = camera_pos_ogre.y;
+    camera_pos.z = camera_pos_ogre.z;
+    msg.camera_pos = camera_pos;
+
+    selected_area_pub->publish(msg);
 }
