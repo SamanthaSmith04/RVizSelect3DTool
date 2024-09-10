@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<library path="rviz_selection_3d">
+<library path="rviz_selection_3d_lib">
     <class name="rviz_selection_3d/Select 3D Tool" 
            type="::SelectionToolPlugin" 
            base_class_type="rviz_common::Tool">
