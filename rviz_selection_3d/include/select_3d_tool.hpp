@@ -27,10 +27,10 @@
 
 #include <pluginlib/class_list_macros.hpp>
 
-
 #include <OgreVector3.h>
 #include <Ogre.h>
 
+#include "rviz_selection_3d/msg/selection_region.hpp"
 class SelectionToolPlugin : public rviz_common::Tool
 {
 public:
