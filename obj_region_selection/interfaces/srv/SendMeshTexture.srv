@@ -1,0 +1,12 @@
+## Service to send a mesh and texture to all RViz Mesh Display Plugins
+
+## Request
+uint8[] texture
+string mesh_filepath
+uint32 width
+uint32 height
+
+---
+
+## Response
+bool success

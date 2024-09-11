@@ -1,0 +1,7 @@
+## Service to toggle on/off all RViz RobotToggleDisplays
+
+bool enabled
+
+---
+
+bool success
