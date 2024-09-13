@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<library path="obj_region_selection">
-    <class name="obj_region_selection_lib/Obj Region Selection Display" 
+<library path="obj_region_selection_lib">
+    <class name="obj_region_selection/Obj Region Selection Display" 
            type="::ObjRegionSelectionDisplay" 
            base_class_type="rviz_common::Display">
         <description>

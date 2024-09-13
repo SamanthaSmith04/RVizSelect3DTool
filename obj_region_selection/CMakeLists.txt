@@ -45,8 +45,8 @@ add_library(${PROJECT_NAME}_lib SHARED
   "include/ogre_mesh_plugin.hpp"
   "include/ogre_mesh_plugin.cpp"
 
-  # "include/obj_region_selection_display.hpp"
-  # "src/obj_region_selection_display.cpp"
+  "include/obj_region_selection_display.hpp"
+  "src/obj_region_selection_display.cpp"
 )
 
 # Interface generation
@@ -82,7 +82,7 @@ install(TARGETS ${PROJECT_NAME}_lib
 )
 
 install(
-  DIRECTORY launch
+  DIRECTORY launch test_parts
   DESTINATION share/${PROJECT_NAME}
 )
 

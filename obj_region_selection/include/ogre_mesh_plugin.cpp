@@ -10,6 +10,8 @@
 
 #include "ogre_mesh_plugin.hpp"
 
+#define OBJ_NAME "testing_ogre_mesh.obj"
+
 OGREMeshPlugin::OGREMeshPlugin(std::string name) : rviz_common::Display()
 , node_(std::make_shared<rclcpp::Node>(name))
 {
@@ -40,13 +42,13 @@ void OGREMeshPlugin::onInitialize() {
     resource_group_manager = Ogre::ResourceGroupManager::getSingletonPtr();
     if (!resource_group_manager->resourceGroupExists(node_name + "_resource_group")) {
         resource_group_manager->createResourceGroup(node_name + "_resource_group");
-        resource_group_manager->addResourceLocation(ament_index_cpp::get_package_share_directory("obj_region_selection") + "/part_mesh", "FileSystem", node_name + "_resource_group");
+        resource_group_manager->addResourceLocation(ament_index_cpp::get_package_share_directory("obj_region_selection") + "/test_parts", "FileSystem", node_name + "_resource_group");
         resource_group_manager->initialiseResourceGroup(node_name + "_resource_group");
         resource_group_manager->loadResourceGroup(node_name + "_resource_group");
     }
     
     scene_node = scene_manager->getRootSceneNode()->createChildSceneNode();
-    mesh_path = ament_index_cpp::get_package_share_directory("obj_region_selection") + "/part_mesh/generated.obj"; 
+    mesh_path = ament_index_cpp::get_package_share_directory("obj_region_selection") + "/test_parts/" + OBJ_NAME; 
 
     reload();
 }
