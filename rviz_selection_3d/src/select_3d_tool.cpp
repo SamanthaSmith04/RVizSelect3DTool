@@ -13,7 +13,7 @@
 SelectionToolPlugin::SelectionToolPlugin() : Tool()
 , node(std::make_shared<rclcpp::Node>("select_3d_tool"))
 {
-    selected_area_pub = node->create_publisher<rviz_selection_3d::msg::SelectionRegion>("/region_points", 10);
+    selected_area_pub = node->create_publisher<rviz_selection_3d::msg::SelectionRegion>("/select_3d_tool/region_points", 10);
 }
 
 

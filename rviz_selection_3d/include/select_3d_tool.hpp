@@ -59,7 +59,7 @@ private:
     Ogre::Vector3 current_second_point;
     Ogre::Vector3 end;
     rviz_common::RenderPanel* render_panel;
-    float distance_threshold = 0.005;
+    float distance_threshold = 0.0001;
 
 };
 

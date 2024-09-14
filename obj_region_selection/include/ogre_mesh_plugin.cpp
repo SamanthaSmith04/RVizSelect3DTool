@@ -10,13 +10,13 @@
 
 #include "ogre_mesh_plugin.hpp"
 
-#define OBJ_NAME "testing_ogre_mesh.obj"
+#define OBJ_NAME "liner_duct.obj"
 
 OGREMeshPlugin::OGREMeshPlugin(std::string name) : rviz_common::Display()
-, node_(std::make_shared<rclcpp::Node>(name))
+, node_(rclcpp::Node::make_shared(name))
 {
     node_name = name;
-    service_nodes = std::make_shared<rclcpp::Node>(node_name + "_service_nodes");
+    service_nodes = rclcpp::Node::make_shared(node_name + "_service_nodes");
     this->setName(QString::fromStdString(node_name + "_marker"));
 
     send_mesh_info_publisher = node_->create_publisher<obj_region_selection::msg::SendMeshInfo>(node_name + "_ux_send_mesh_info", 1);
@@ -62,6 +62,9 @@ void OGREMeshPlugin::update(float wall_dt, float ros_dt) {
             reload();
         }
     }
+
+    rclcpp::spin_some(node_);
+    rclcpp::spin_some(service_nodes);
 }
 
 void OGREMeshPlugin::constructMesh(std::string obj_file_path) {
@@ -96,9 +99,9 @@ void OGREMeshPlugin::reload() {
 }
 
 void OGREMeshPlugin::runRosNodes() {
-    rclcpp::executors::MultiThreadedExecutor executor;
-    executor.add_node(service_nodes);
-    executor.spin();
+    // rclcpp::executors::MultiThreadedExecutor executor;
+    // executor.add_node(service_nodes);
+    // executor.spin();
 }
 
 void OGREMeshPlugin::toggleMarker(const std::shared_ptr<obj_region_selection::srv::ToggleService::Request> request, std::shared_ptr<obj_region_selection::srv::ToggleService::Response> response) {

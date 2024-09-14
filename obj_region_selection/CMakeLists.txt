@@ -21,6 +21,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(rviz_selection_3d REQUIRED)
 
 # Set up include directories
 set(INCLUDE_DIRS
@@ -37,6 +38,7 @@ include_directories(
   ${rviz_common_INCLUDE_DIRS}
   ${rviz_rendering_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
+  ${rviz_selection_3d_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
@@ -44,7 +46,6 @@ include_directories(
 add_library(${PROJECT_NAME}_lib SHARED
   "include/ogre_mesh_plugin.hpp"
   "include/ogre_mesh_plugin.cpp"
-
   "include/obj_region_selection_display.hpp"
   "src/obj_region_selection_display.cpp"
 )
@@ -73,6 +74,7 @@ ament_target_dependencies(${PROJECT_NAME}_lib
   rviz_rendering
   rclcpp
   pluginlib
+  rviz_selection_3d
 )
 
 # Install target
