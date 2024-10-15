@@ -4,7 +4,12 @@ ObjRegionSelectionDisplay::ObjRegionSelectionDisplay() : OGREMeshPlugin("obj_sel
     selected_pub = node_->create_publisher<geometry_msgs::msg::PoseArray>("/selected_points_in_region", 10);
 }
 
-
+/**
+ * @brief Callback for the region selection. 
+ * 
+ * Gets the points in a drawn polygon and the camera data
+ * 
+ */
 void ObjRegionSelectionDisplay::regionCallback(const rviz_selection_3d::msg::SelectionRegion::SharedPtr msg) {
     RCLCPP_INFO(node_->get_logger(), "Received region data");
     // glm::vec3 cameraPosition = glm::vec3(msg->camera_pos.x, msg->camera_pos.y, msg->camera_pos.z);
@@ -18,15 +23,6 @@ void ObjRegionSelectionDisplay::regionCallback(const rviz_selection_3d::msg::Sel
         projectionMatrix[i/4][i%4] = msg->camera.projection_matrix_4x4[i];
     }
 
-    RCLCPP_INFO(node_->get_logger(), "Projection Matrix:");
-    for (int i = 0; i < 4; i++) {
-        RCLCPP_INFO(node_->get_logger(), "%f, %f, %f, %f", projectionMatrix[i][0], projectionMatrix[i][1], projectionMatrix[i][2], projectionMatrix[i][3]);
-    }
-
-    RCLCPP_INFO(node_->get_logger(), "View Matrix:");
-    for (int i = 0; i < 4; i++) {
-        RCLCPP_INFO(node_->get_logger(), "%f, %f, %f, %f", viewMatrix[i][0], viewMatrix[i][1], viewMatrix[i][2], viewMatrix[i][3]);
-    }
     glm::mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
 
     std::vector<geometry_msgs::msg::Point> points_in_polygon = getPointsInPolygon(obj_data.positions, msg->points, viewMatrix, projectionMatrix, msg->viewport_width, msg->viewport_height);
@@ -36,24 +32,48 @@ void ObjRegionSelectionDisplay::regionCallback(const rviz_selection_3d::msg::Sel
     RCLCPP_INFO(node_->get_logger(), "Number of vertices: %d:", obj_data.numVertices);
 }
 
+/**
+ * @brief Projects a 3D point to 2D screen coordinates
+ * 
+ * @param point The 3D point to project
+ *  
+ * @param viewMatrix The camera view matrix
+ * 
+ * @param projMatrix The camera projection matrix
+ * 
+ * @param viewport_width The width of the viewport
+ * 
+ * @param viewport_height The height of the viewport
+ * 
+ * @return The 2D screen coordinates of the point
+ */
 glm::vec2 ObjRegionSelectionDisplay::projectedPoint(glm::vec3 point, glm::mat4 viewMatrix, glm::mat4 projMatrix, int viewport_width, int viewport_height) {
-    // RCLCPP_INFO(node_->get_logger(), "Point: %f, %f, %f", point.x, point.y, point.z);
 
     // Transform the point using the view and projection matrices
     glm::vec4 transformedPos = projMatrix * (viewMatrix * glm::vec4(point.x, point.y, point.z, 1.0f));
 
+    if (transformedPos.w == 0) {
+        return glm::vec2(-1,-1);
+    }
+
     transformedPos /= transformedPos.w;
     
-    // RCLCPP_INFO(node_->get_logger(), "Transformed Point: %f, %f, %f", transformedPos.x, transformedPos.y, transformedPos.z);
-
     float screenX = (transformedPos.x + 1.0f) * (viewport_width / 2.0f);
     float screenY = (1.0f - transformedPos.y) * (viewport_height / 2.0f); // Invert y-axis for top-left origin
-
-    // RCLCPP_INFO(node_->get_logger(), "Screen Point: %f, %f", screenX, screenY);
 
     return glm::vec2(screenX, screenY);
 }
 
+
+/**
+ * @brief Checks if a point is inside a polygon
+ * 
+ * @param point The 2D point to check
+ * 
+ * @param polygon_points The 2D points of the polygon
+ * 
+ * @return True if the point is inside the polygon, false otherwise
+ */
 bool ObjRegionSelectionDisplay::isPointInPolygon(glm::vec2 point, std::vector<geometry_msgs::msg::Point> polygon_points) {
     int crossings = 0;
     for (int i = 0; i < polygon_points.size(); i++) {
@@ -71,6 +91,23 @@ bool ObjRegionSelectionDisplay::isPointInPolygon(glm::vec2 point, std::vector<ge
     return (crossings % 2 == 1);
 }
 
+/**
+ * @brief Gets the points in a drawn polygon
+ * 
+ * @param points The 3D points to check
+ * 
+ * @param polygon_points The 2D points of the polygon
+ * 
+ * @param viewMatrix The camera view matrix
+ * 
+ * @param projMatrix The camera projection matrix
+ * 
+ * @param viewport_width The width of the viewport
+ * 
+ * @param viewport_height The height of the viewport
+ * 
+ * @return The 3D points inside the polygon
+ */
 std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPolygon(std::vector<Ogre::Vector3> points, 
                                                                                     std::vector<geometry_msgs::msg::Point> polygon_points, 
                                                                                     glm::mat4 viewMatrix, glm::mat4 projMatrix, 
@@ -108,6 +145,18 @@ std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPol
     return points_in_polygon;
 }
 
+bool ObjRegionSelectionDisplay::isPointVisibleToUser(glm::vec3 point, glm::mat4 viewMatrix, glm::mat4 projMatrix, int viewport_width, int viewport_height) {
+    glm::vec2 screenPoint = projectedPoint(point, viewMatrix, projMatrix, viewport_width, viewport_height);
+    if (screenPoint == glm::vec2(-1,-1)) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Initializes the display plugin
+ * 
+ */
 void ObjRegionSelectionDisplay::onInitialize() {
     meshLoaded = true;
 
