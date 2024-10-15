@@ -153,7 +153,7 @@ void OGREMeshPlugin::readOBJ(std::string obj_file_path) {
             iss >> x >> y >> z;
             tempPositionVector = Ogre::Vector3(x, y, z);
             obj_data.positions.push_back(tempPositionVector);
-            obj_data.numVerticies++;
+            obj_data.numVertices++;
         }
         else if (line.substr(0,2) == "f ") {
             int v1, v2, v3, t1, t2, t3, n1, n2, n3;

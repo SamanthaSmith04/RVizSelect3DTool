@@ -185,7 +185,7 @@ class OGREMeshPlugin : public rviz_common::Display {
          * @param facePositions the vector of face positions
          * @param faceTextureCoords the vector of face texture coordinates
          * @param faceNormals the vector of face normals
-         * @param numVerticies the number of verticies
+         * @param numVertices the number of Vertices
          * @param numTextureCoords the number of texture coordinates
          * @param numNormals the number of normals
          * @param numFaces the number of faces
@@ -197,7 +197,7 @@ class OGREMeshPlugin : public rviz_common::Display {
             std::vector<Ogre::Vector3> facePositions;         // f (*/#/#)
             std::vector<Ogre::Vector3> faceTextureCoords;     // f (#/*/#)
             std::vector<Ogre::Vector3> faceNormals;           // f (#/#/*)
-            int numVerticies = 0;
+            int numVertices = 0;
             int numTextureCoords = 0;
             int numNormals = 0;
             int numFaces = 0;

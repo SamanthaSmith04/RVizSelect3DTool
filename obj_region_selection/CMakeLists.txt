@@ -22,6 +22,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(rviz_selection_3d REQUIRED)
+find_package(glm REQUIRED)
 
 # Set up include directories
 set(INCLUDE_DIRS
@@ -39,6 +40,7 @@ include_directories(
   ${rviz_rendering_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
   ${rviz_selection_3d_INCLUDE_DIRS}
+  ${GLM_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
