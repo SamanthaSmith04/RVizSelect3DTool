@@ -45,7 +45,7 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
     bool in_viewport = (event.x >= 0 && event.x <= viewport->getActualWidth() && 
                         event.y >= 0 && event.y <= viewport->getActualHeight());
 
-    RCLCPP_INFO(node->get_logger(), "Mouse Position: %d, %d", event.x, event.y);
+    // RCLCPP_INFO(node->get_logger(), "Mouse Position: %d, %d", event.x, event.y);
 
     if ((event.leftDown() || event.rightDown()) && !currently_selecting && success && in_viewport){
         // Set selection mode

@@ -2,6 +2,7 @@
 
 ObjRegionSelectionDisplay::ObjRegionSelectionDisplay() : OGREMeshPlugin("obj_selection_display") {
     selected_pub = node_->create_publisher<geometry_msgs::msg::PoseArray>("/selected_points_in_region", 10);
+    normals_pub = node_->create_publisher<geometry_msgs::msg::PoseArray>("/normals", 10);
 }
 
 /**
@@ -25,11 +26,26 @@ void ObjRegionSelectionDisplay::regionCallback(const rviz_selection_3d::msg::Sel
 
     glm::mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
 
-    std::vector<geometry_msgs::msg::Point> points_in_polygon = getPointsInPolygon(obj_data.positions, msg->points, viewMatrix, projectionMatrix, msg->viewport_width, msg->viewport_height);
+    std::vector<geometry_msgs::msg::Point> points_in_polygon = getPointsInPolygon(obj_data.positions, obj_data.normals, msg->points, viewMatrix, projectionMatrix, cameraPosition, msg->viewport_width, msg->viewport_height);
 
     RCLCPP_INFO(node_->get_logger(), "Number of points in polygon: %d", points_in_polygon.size());
 
     RCLCPP_INFO(node_->get_logger(), "Number of vertices: %d:", obj_data.numVertices);
+
+    auto normals_msg = geometry_msgs::msg::PoseArray();
+    normals_msg.header.frame_id = "map"; 
+    normals_msg.poses.resize(obj_data.numVertices);
+    for (size_t i = 0; i < obj_data.numVertices; i++) {
+        normals_msg.poses[i].position.x = obj_data.positions[i].x;
+        normals_msg.poses[i].position.y = obj_data.positions[i].y;
+        normals_msg.poses[i].position.z = obj_data.positions[i].z;
+        normals_msg.poses[i].orientation.x = obj_data.normals[i].x;
+        normals_msg.poses[i].orientation.y = obj_data.normals[i].y;
+        normals_msg.poses[i].orientation.z = obj_data.normals[i].z;
+        normals_msg.poses[i].orientation.w = 1.0; 
+    }
+
+    normals_pub->publish(normals_msg);
 }
 
 /**
@@ -109,35 +125,46 @@ bool ObjRegionSelectionDisplay::isPointInPolygon(glm::vec2 point, std::vector<ge
  * @return The 3D points inside the polygon
  */
 std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPolygon(std::vector<Ogre::Vector3> points, 
+                                                                                    std::vector<Ogre::Vector3> normals,     
                                                                                     std::vector<geometry_msgs::msg::Point> polygon_points, 
                                                                                     glm::mat4 viewMatrix, glm::mat4 projMatrix, 
+                                                                                    glm::vec3 cameraPosition,
                                                                                     int viewport_width, 
                                                                                     int viewport_height) 
 {
     std::vector<geometry_msgs::msg::Point> points_in_polygon;
+    int count = 0;
     for (auto& point: points) {
         glm::vec2 screenPoint = projectedPoint(glm::vec3(point.x, point.y, point.z), viewMatrix, projMatrix, viewport_width, viewport_height);
         if (screenPoint == glm::vec2(-1,-1)) {
             continue;
         }
-        if (isPointInPolygon(screenPoint, polygon_points)) {
-            auto point_msg = geometry_msgs::msg::Point();
-            point_msg.x = point.x;
-            point_msg.y = point.y;
-            point_msg.z = point.z;
-            points_in_polygon.push_back(point_msg);
+        if (isPointVisibleToUser(glm::vec3(normals[count].x, normals[count].y, normals[count].z), 
+                                glm::vec3(point.x, point.y, point.z), 
+                                cameraPosition) 
+                                == true) {
+        
+            if (isPointInPolygon(screenPoint, polygon_points)) {
+                auto point_msg = geometry_msgs::msg::Point();
+                point_msg.x = point.x;
+                point_msg.y = point.y;
+                point_msg.z = point.z;
+                points_in_polygon.push_back(point_msg);
+            }
         }
+
+        count++;
     }
 
     geometry_msgs::msg::PoseArray pose_array;
-    pose_array.header.frame_id = "map"; // Set the frame ID according to your needs
+    pose_array.header.frame_id = "map"; 
     pose_array.poses.resize(points_in_polygon.size());
 
     for (size_t i = 0; i < points_in_polygon.size(); i++) {
         pose_array.poses[i].position.x = points_in_polygon[i].x;
         pose_array.poses[i].position.y = points_in_polygon[i].y;
         pose_array.poses[i].position.z = points_in_polygon[i].z;
-        pose_array.poses[i].orientation.w = 1.0; // Set the orientation as needed
+        pose_array.poses[i].orientation.w = 1.0; 
     }
 
     selected_pub->publish(pose_array);
@@ -145,12 +172,30 @@ std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPol
     return points_in_polygon;
 }
 
-bool ObjRegionSelectionDisplay::isPointVisibleToUser(glm::vec3 point, glm::mat4 viewMatrix, glm::mat4 projMatrix, int viewport_width, int viewport_height) {
-    glm::vec2 screenPoint = projectedPoint(point, viewMatrix, projMatrix, viewport_width, viewport_height);
-    if (screenPoint == glm::vec2(-1,-1)) {
-        return false;
+bool ObjRegionSelectionDisplay::isPointVisibleToUser(glm::vec3 pointNormal, glm::vec3 pointPosition, glm::vec3 cameraPosition) {
+
+    bool isVisible = false;
+
+    // get vector from camera to point
+    glm::vec3 cameraToPoint = pointPosition - cameraPosition;
+    // RCLCPP_INFO(node_->get_logger(), "=================================");
+    // RCLCPP_INFO(node_->get_logger(), "Point position: %f %f %f", pointPosition.x, pointPosition.y, pointPosition.z);
+    // RCLCPP_INFO(node_->get_logger(), "Camera position: %f %f %f", cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    // RCLCPP_INFO(node_->get_logger(), "Point normal: %f %f %f", pointNormal.x, pointNormal.y, pointNormal.z);
+    // RCLCPP_INFO(node_->get_logger(), "Camera to point: %f %f %f", cameraToPoint.x, cameraToPoint.y, cameraToPoint.z);
+
+    // get angle between vector and normal
+    float angle = glm::dot(glm::normalize(cameraToPoint), glm::normalize(pointNormal));
+
+    // if angle is less than 90 degrees, point is visible
+
+    // RCLCPP_INFO(node_->get_logger(), "Angle: %f", angle);
+    const float zero_threshold = 0.0001;
+    if (angle >= -zero_threshold) {
+        isVisible = true;
     }
-    return true;
+
+    return isVisible;
 }
 
 /**
