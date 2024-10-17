@@ -63,10 +63,10 @@ void ObjRegionSelectionDisplay::regionCallback(const rviz_selection_3d::msg::Sel
  * 
  * @return The 2D screen coordinates of the point
  */
-glm::vec2 ObjRegionSelectionDisplay::projectedPoint(glm::vec3 point, glm::mat4 viewMatrix, glm::mat4 projMatrix, int viewport_width, int viewport_height) {
+glm::vec2 ObjRegionSelectionDisplay::projectedPoint(glm::vec3 point, glm::mat4 viewProjectionMatrix, int viewport_width, int viewport_height) {
 
     // Transform the point using the view and projection matrices
-    glm::vec4 transformedPos = projMatrix * (viewMatrix * glm::vec4(point.x, point.y, point.z, 1.0f));
+    glm::vec4 transformedPos = (viewProjectionMatrix * glm::vec4(point.x, point.y, point.z, 1.0f));
 
     if (transformedPos.w == 0) {
         return glm::vec2(-1,-1);
@@ -137,37 +137,31 @@ std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPol
     std::vector<geometry_msgs::msg::Point> points_in_polygon;
     int count = 0;
     // check over every point in the obj
+    glm::mat4 viewProjectionMatrix = projMatrix * viewMatrix;
+
     for (auto& point: points) {
-        glm::vec2 screenPoint = projectedPoint(glm::vec3(point.x, point.y, point.z), viewMatrix, projMatrix, viewport_width, viewport_height);
+        glm::vec2 screenPoint = projectedPoint(glm::vec3(point.x, point.y, point.z), viewProjectionMatrix, viewport_width, viewport_height);
         // if point is not on the screen, skip
         if (screenPoint == glm::vec2(-1,-1)) {
             continue;
         }
-        // check if the normal vector is pointing towards the camera (comes from the obj)
-        // This only works if there is an equal number of normals and points in the obj
-        // if there isnt, this confition can be commented out, it just will run less efficiently
-        if (isPointNormalTowardCamera(glm::vec3(normals[count].x, normals[count].y, normals[count].z), 
-                                glm::vec3(point.x, point.y, point.z), 
-                                cameraPosition) 
-                                == true) {
-            // check if the 2d position on-screen of the 3d point is within the 2d drawn polygon on the screen
-            if (isPointInPolygon(screenPoint, polygon_points)) {
-                glm::vec3 p = glm::vec3(point.x, point.y, point.z);
-                // check if the current point is visible from the camera (not being blocked by any face)
-                if (isFaceVisible(p, face_positions, face_normals, points, normals, cameraPosition)) {
-                    auto point_msg = geometry_msgs::msg::Point();
-                    point_msg.x = point.x;
-                    point_msg.y = point.y;
-                    point_msg.z = point.z;
 
-                    // Store the visible, valid point
+        // check if the 2d position on-screen of the 3d point is within the 2d drawn polygon on the screen
+        if (isPointInPolygon(screenPoint, polygon_points)) {
+            glm::vec3 p = glm::vec3(point.x, point.y, point.z);
+            // check if the current point is visible from the camera (not being blocked by any face)
+            if (isFaceVisible(p, face_positions, face_normals, points, normals, cameraPosition)) {
+                auto point_msg = geometry_msgs::msg::Point();
+                point_msg.x = point.x;
+                point_msg.y = point.y;
+                point_msg.z = point.z;
+
+                // Store the visible, valid point
                     points_in_polygon.push_back(point_msg);
                 }
                 
             }
         }
-        count++;
-    }
 
     geometry_msgs::msg::PoseArray pose_array;
     pose_array.header.frame_id = "map"; 
@@ -211,6 +205,7 @@ bool ObjRegionSelectionDisplay::isFaceVisible(glm::vec3 check_point, std::vector
     
     // loop over all faces in the obj
     // finds the closes intersection point of the point and any face from the camera
+
     for (int i = 0; i < face_positions.size(); i++) {
         Ogre::Vector3 v0 = points[face_positions[i][0]];
         Ogre::Vector3 v1 = points[face_positions[i][1]];

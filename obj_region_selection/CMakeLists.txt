@@ -86,7 +86,7 @@ install(TARGETS ${PROJECT_NAME}_lib
 )
 
 install(
-  DIRECTORY launch test_parts
+  DIRECTORY test_parts
   DESTINATION share/${PROJECT_NAME}
 )
 

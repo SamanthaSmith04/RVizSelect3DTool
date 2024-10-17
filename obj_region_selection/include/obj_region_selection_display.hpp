@@ -37,7 +37,7 @@ class ObjRegionSelectionDisplay : public OGREMeshPlugin {
          */
         void onInitialize() override;
 
-        glm::vec2 projectedPoint(glm::vec3 point, glm::mat4 viewMatrix, glm::mat4 projMatrix, int viewport_width, int viewport_height);
+        glm::vec2 projectedPoint(glm::vec3 point, glm::mat4 viewProjectionMatrix, int viewport_width, int viewport_height);
 
         bool isPointInPolygon(glm::vec2 point, std::vector<geometry_msgs::msg::Point> polygon_points);
 
