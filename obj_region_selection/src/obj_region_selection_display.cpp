@@ -26,7 +26,7 @@ void ObjRegionSelectionDisplay::regionCallback(const rviz_selection_3d::msg::Sel
 
     glm::mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
 
-    std::vector<geometry_msgs::msg::Point> points_in_polygon = getPointsInPolygon(obj_data.positions, obj_data.normals, msg->points, viewMatrix, projectionMatrix, cameraPosition, msg->viewport_width, msg->viewport_height);
+    std::vector<geometry_msgs::msg::Point> points_in_polygon = getPointsInPolygon(obj_data.positions, obj_data.normals, obj_data.facePositions, obj_data.faceNormals, msg->points, viewMatrix, projectionMatrix, cameraPosition, msg->viewport_width, msg->viewport_height);
 
     RCLCPP_INFO(node_->get_logger(), "Number of points in polygon: %d", points_in_polygon.size());
 
@@ -108,7 +108,7 @@ bool ObjRegionSelectionDisplay::isPointInPolygon(glm::vec2 point, std::vector<ge
 }
 
 /**
- * @brief Gets the points in a drawn polygon
+ * @brief Gets the points that are visible and selected by a drawn polygon
  * 
  * @param points The 3D points to check
  * 
@@ -125,7 +125,9 @@ bool ObjRegionSelectionDisplay::isPointInPolygon(glm::vec2 point, std::vector<ge
  * @return The 3D points inside the polygon
  */
 std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPolygon(std::vector<Ogre::Vector3> points, 
-                                                                                    std::vector<Ogre::Vector3> normals,     
+                                                                                    std::vector<Ogre::Vector3> normals,   
+                                                                                    std::vector<Ogre::Vector3> face_positions,
+                                                                                    std::vector<Ogre::Vector3> face_normals,  
                                                                                     std::vector<geometry_msgs::msg::Point> polygon_points, 
                                                                                     glm::mat4 viewMatrix, glm::mat4 projMatrix, 
                                                                                     glm::vec3 cameraPosition,
@@ -134,25 +136,36 @@ std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPol
 {
     std::vector<geometry_msgs::msg::Point> points_in_polygon;
     int count = 0;
+    // check over every point in the obj
     for (auto& point: points) {
         glm::vec2 screenPoint = projectedPoint(glm::vec3(point.x, point.y, point.z), viewMatrix, projMatrix, viewport_width, viewport_height);
+        // if point is not on the screen, skip
         if (screenPoint == glm::vec2(-1,-1)) {
             continue;
         }
-        if (isPointVisibleToUser(glm::vec3(normals[count].x, normals[count].y, normals[count].z), 
+        // check if the normal vector is pointing towards the camera (comes from the obj)
+        // This only works if there is an equal number of normals and points in the obj
+        // if there isnt, this confition can be commented out, it just will run less efficiently
+        if (isPointNormalTowardCamera(glm::vec3(normals[count].x, normals[count].y, normals[count].z), 
                                 glm::vec3(point.x, point.y, point.z), 
                                 cameraPosition) 
                                 == true) {
-        
+            // check if the 2d position on-screen of the 3d point is within the 2d drawn polygon on the screen
             if (isPointInPolygon(screenPoint, polygon_points)) {
-                auto point_msg = geometry_msgs::msg::Point();
-                point_msg.x = point.x;
-                point_msg.y = point.y;
-                point_msg.z = point.z;
-                points_in_polygon.push_back(point_msg);
+                glm::vec3 p = glm::vec3(point.x, point.y, point.z);
+                // check if the current point is visible from the camera (not being blocked by any face)
+                if (isFaceVisible(p, face_positions, face_normals, points, normals, cameraPosition)) {
+                    auto point_msg = geometry_msgs::msg::Point();
+                    point_msg.x = point.x;
+                    point_msg.y = point.y;
+                    point_msg.z = point.z;
+
+                    // Store the visible, valid point
+                    points_in_polygon.push_back(point_msg);
+                }
+                
             }
         }
-
         count++;
     }
 
@@ -172,24 +185,128 @@ std::vector<geometry_msgs::msg::Point> ObjRegionSelectionDisplay::getPointsInPol
     return points_in_polygon;
 }
 
-bool ObjRegionSelectionDisplay::isPointVisibleToUser(glm::vec3 pointNormal, glm::vec3 pointPosition, glm::vec3 cameraPosition) {
+/**
+ * @brief Checks if a face is visible from the camera (not blocked by any other face)
+ * 
+ * @param check_point The point to check
+ * 
+ * @param face_positions The positions indices of the faces
+ * 
+ * @param face_normals The normals indices of the faces
+ * 
+ * @param points The 3D points of the obj
+ * 
+ * @param normals The normals of the obj
+ * 
+ * @param cameraPosition The position of the camera
+ * 
+ * @return True if the face is visible, false otherwise
+ * 
+ */
+bool ObjRegionSelectionDisplay::isFaceVisible(glm::vec3 check_point, std::vector<Ogre::Vector3> face_positions, std::vector<Ogre::Vector3> face_normals, std::vector<Ogre::Vector3> points, std::vector<Ogre::Vector3> normals, glm::vec3 cameraPosition) {
+    float t;
+    bool isVisible = true;
+    float closest_t = 1000000;
+    float distanceToCamera = glm::distance(check_point, cameraPosition);
+    
+    // loop over all faces in the obj
+    // finds the closes intersection point of the point and any face from the camera
+    for (int i = 0; i < face_positions.size(); i++) {
+        Ogre::Vector3 v0 = points[face_positions[i][0]];
+        Ogre::Vector3 v1 = points[face_positions[i][1]];
+        Ogre::Vector3 v2 = points[face_positions[i][2]];
+
+        // check if a ray cast from the camera to the point intersects with the face
+        if (rayIntersectsTriangle(glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z), 
+                                  glm::normalize(check_point - cameraPosition), 
+                                  v0, v1, v2, t)) {
+            // store the closest intersection point
+            if (t < closest_t) {
+                closest_t = t;
+            }
+        }
+    }
+
+    // if the closest intersection point is not the same as the distance to the camera (within a small threshold), the point is not visible
+    if (std::abs(closest_t - distanceToCamera) > 0.01) {
+        isVisible = false;
+    }
+
+    return isVisible; 
+}
+
+
+/**
+ * @brief Checks if a ray intersects a triangle
+ * 
+ * @param rayOrigin The origin of the ray
+ * 
+ * @param rayDirection The direction of the ray
+ * 
+ * @param v0 The first vertex of the triangle
+ * 
+ * @param v1 The second vertex of the triangle
+ * 
+ * @param v2 The third vertex of the triangle
+ * 
+ * @param t The distance to the intersection point (pointer)
+ * 
+ * @return True if the ray intersects the triangle, false otherwise
+ */
+bool ObjRegionSelectionDisplay::rayIntersectsTriangle(const glm::vec3& rayOrigin, 
+                           const glm::vec3& rayDirection, 
+                           const Ogre::Vector3& v0, 
+                           const Ogre::Vector3& v1, 
+                           const Ogre::Vector3& v2, 
+                           float& t) {
+
+    // get the edges of the triangle
+    glm::vec3 edge1 = glm::vec3(v1.x, v1.y, v1.z) - glm::vec3(v0.x, v0.y, v0.z);
+    glm::vec3 edge2 = glm::vec3(v2.x, v2.y, v2.z) - glm::vec3(v0.x, v0.y, v0.z);
+
+    // check if the ray is parallel to the triangle
+    glm::vec3 h = glm::cross(rayDirection, edge2);
+    float a = glm::dot(edge1, h);
+
+    if (a > -1e-5 && a < 1e-5) return false; // Parallel
+
+    float f = 1.0 / a;
+    glm::vec3 s = rayOrigin - glm::vec3(v0.x, v0.y, v0.z);
+    float u = f * glm::dot(s, h);
+    if (u < 0.0 || u > 1.0) return false;
+
+    glm::vec3 q = glm::cross(s, edge1);
+    float v = f * glm::dot(rayDirection, q);
+    if (v < 0.0 || u + v > 1.0) return false;
+
+    // calculate the distance to the intersection point
+    t = f * glm::dot(edge2, q);
+    return t > 1e-5; // Intersection occurs
+}
+
+/**
+ * @brief Checks if a point normal is towards the camera
+ * 
+ * @param pointNormal The normal of the point
+ * 
+ * @param pointPosition The position of the point
+ * 
+ * @param cameraPosition The position of the camera
+ * 
+ * @return True if the normal is towards the camera, false otherwise
+ * 
+ */
+bool ObjRegionSelectionDisplay::isPointNormalTowardCamera(glm::vec3 pointNormal, glm::vec3 pointPosition, glm::vec3 cameraPosition) {
 
     bool isVisible = false;
 
     // get vector from camera to point
     glm::vec3 cameraToPoint = pointPosition - cameraPosition;
-    // RCLCPP_INFO(node_->get_logger(), "=================================");
-    // RCLCPP_INFO(node_->get_logger(), "Point position: %f %f %f", pointPosition.x, pointPosition.y, pointPosition.z);
-    // RCLCPP_INFO(node_->get_logger(), "Camera position: %f %f %f", cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    // RCLCPP_INFO(node_->get_logger(), "Point normal: %f %f %f", pointNormal.x, pointNormal.y, pointNormal.z);
-    // RCLCPP_INFO(node_->get_logger(), "Camera to point: %f %f %f", cameraToPoint.x, cameraToPoint.y, cameraToPoint.z);
 
     // get angle between vector and normal
     float angle = glm::dot(glm::normalize(cameraToPoint), glm::normalize(pointNormal));
 
-    // if angle is less than 90 degrees, point is visible
-
-    // RCLCPP_INFO(node_->get_logger(), "Angle: %f", angle);
+    // if angle is less than 90 degrees and greater than 0 degrees, point is visible
     const float zero_threshold = 0.0001;
     if (angle >= -zero_threshold) {
         isVisible = true;

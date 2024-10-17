@@ -100,6 +100,15 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
             line_grid_points.push_back(grid_pos);
 
             auto line = std::make_shared<rviz_rendering::Line>(context_->getSceneManager());   
+
+            line->setPoints(end, current_first_point);
+            if (selection_mode) {
+                line->setColor(0.0, 1.0, 0.0, 1.0);
+            } else {
+                line->setColor(1.0, 0.0, 0.0, 1.0);
+            }
+            selected_polygon_lines.push_back(line);
+
             line->setPoints(end, begin);
             if (selection_mode) {
                 line->setColor(0.0, 1.0, 0.0, 1.0);
@@ -111,6 +120,7 @@ int SelectionToolPlugin::processMouseEvent(rviz_common::ViewportMouseEvent& even
         Ogre::Camera* camera = render_panel->getViewController()->getCamera();
         publishSelectedAreaInfo(camera);
     }
+    // mouse is moving
     else if (success && currently_selecting) {
         current_second_point = Ogre::Vector3();
         current_second_point.x = pos.x;

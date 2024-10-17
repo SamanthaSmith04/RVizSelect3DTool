@@ -43,8 +43,11 @@ class ObjRegionSelectionDisplay : public OGREMeshPlugin {
 
         bool isPointVisibleToUser(glm::vec3 pointNormal, glm::vec3 pointPosition, glm::vec3 cameraPosition);
 
-        std::vector<geometry_msgs::msg::Point> getPointsInPolygon(std::vector<Ogre::Vector3> points, std::vector<Ogre::Vector3> normals, std::vector<geometry_msgs::msg::Point> polygon_points, glm::mat4 viewMatrix, glm::mat4 projMatrix, glm::vec3 cameraPosition, int viewport_width, int viewport_height);
+        std::vector<geometry_msgs::msg::Point> getPointsInPolygon(std::vector<Ogre::Vector3> points, std::vector<Ogre::Vector3> normals, std::vector<Ogre::Vector3> face_positions, std::vector<Ogre::Vector3> face_normals, std::vector<geometry_msgs::msg::Point> polygon_points, glm::mat4 viewMatrix, glm::mat4 projMatrix, glm::vec3 cameraPosition, int viewport_width, int viewport_height);
 
+        bool rayIntersectsTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const Ogre::Vector3& v0, const Ogre::Vector3& v1, const Ogre::Vector3& v2, float& t);
+
+        bool isFaceVisible(glm::vec3 point, std::vector<Ogre::Vector3> face_positions, std::vector<Ogre::Vector3> face_normals, std::vector<Ogre::Vector3> points, std::vector<Ogre::Vector3> normals, glm::vec3 cameraPosition);
         rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr selected_pub;
 
         rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr normals_pub;
