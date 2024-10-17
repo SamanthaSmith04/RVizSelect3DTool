@@ -41,7 +41,7 @@ class ObjRegionSelectionDisplay : public OGREMeshPlugin {
 
         bool isPointInPolygon(glm::vec2 point, std::vector<geometry_msgs::msg::Point> polygon_points);
 
-        bool isPointVisibleToUser(glm::vec3 pointNormal, glm::vec3 pointPosition, glm::vec3 cameraPosition);
+        bool isPointNormalTowardCamera(glm::vec3 pointNormal, glm::vec3 pointPosition, glm::vec3 cameraPosition);
 
         std::vector<geometry_msgs::msg::Point> getPointsInPolygon(std::vector<Ogre::Vector3> points, std::vector<Ogre::Vector3> normals, std::vector<Ogre::Vector3> face_positions, std::vector<Ogre::Vector3> face_normals, std::vector<geometry_msgs::msg::Point> polygon_points, glm::mat4 viewMatrix, glm::mat4 projMatrix, glm::vec3 cameraPosition, int viewport_width, int viewport_height);
 
