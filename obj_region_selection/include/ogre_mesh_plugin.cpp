@@ -241,30 +241,32 @@ void OGREMeshPlugin::fillMesh() {
         int vertexIndex3 = obj_data.facePositions[i].z;
         int normalIndex3 = obj_data.faceNormals[i].z;
 
-        // Calculate and set UV coordinates
-        if (obj_data.faceTextureCoords[i].x != -1) {
-            int textureCoordIndex1 = obj_data.faceTextureCoords[i].x;
-            int textureCoordIndex2 = obj_data.faceTextureCoords[i].y;
-            int textureCoordIndex3 = obj_data.faceTextureCoords[i].z;
-
-            Ogre::Vector2 uv1(obj_data.textureCoords[textureCoordIndex1].x, 1 - obj_data.textureCoords[textureCoordIndex1].y);
-            Ogre::Vector2 uv2(obj_data.textureCoords[textureCoordIndex2].x, 1 - obj_data.textureCoords[textureCoordIndex2].y);
-            Ogre::Vector2 uv3(obj_data.textureCoords[textureCoordIndex3].x, 1 - obj_data.textureCoords[textureCoordIndex3].y);
-
-            mesh->textureCoord(uv1); // Set UV coordinate
-            mesh->textureCoord(uv2); // Set UV coordinate
-            mesh->textureCoord(uv3); // Set UV coordinate
-        }
+        // UV coordinates
+        int textureCoordIndex1 = obj_data.faceTextureCoords[i].x;
+        int textureCoordIndex2 = obj_data.faceTextureCoords[i].y;
+        int textureCoordIndex3 = obj_data.faceTextureCoords[i].z;
 
         // Add vertex position, texture coordinate, and normal for each vertex
         mesh->position(obj_data.positions[vertexIndex1]);
         mesh->normal(obj_data.normals[normalIndex1]);
+        if (obj_data.faceTextureCoords[i].x != -1) {
+            Ogre::Vector2 uv1(obj_data.textureCoords[textureCoordIndex1].x, 1 - obj_data.textureCoords[textureCoordIndex1].y);
+            mesh->textureCoord(uv1); // Set UV coordinate);
+        }
 
         mesh->position(obj_data.positions[vertexIndex2]);
         mesh->normal(obj_data.normals[normalIndex2]);
+        if (obj_data.faceTextureCoords[i].x != -1) {
+            Ogre::Vector2 uv2(obj_data.textureCoords[textureCoordIndex2].x, 1 - obj_data.textureCoords[textureCoordIndex2].y);
+            mesh->textureCoord(uv2); // Set UV coordinate
+        }
 
         mesh->position(obj_data.positions[vertexIndex3]);
         mesh->normal(obj_data.normals[normalIndex3]);
+        if (obj_data.faceTextureCoords[i].x != -1) {
+            Ogre::Vector2 uv3(obj_data.textureCoords[textureCoordIndex3].x, 1 - obj_data.textureCoords[textureCoordIndex3].y);
+            mesh->textureCoord(uv3); // Set UV coordinate
+        }
 
         // Add the triangle
         mesh->triangle(i * 3, i * 3 + 1, i * 3 + 2);
